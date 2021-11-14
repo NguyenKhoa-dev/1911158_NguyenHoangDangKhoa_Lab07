@@ -169,8 +169,8 @@ SET IDENTITY_INSERT [dbo].[Category] OFF
 SET IDENTITY_INSERT [dbo].[Food] ON 
 
 INSERT [dbo].[Food] ([ID], [Name], [Unit], [FoodCategoryID], [Price], [Notes]) VALUES (1, N'Rau muống xào tỏi', N'Đĩa', 6, 20000, NULL)
-INSERT [dbo].[Food] ([ID], [Name], [Unit], [FoodCategoryID], [Price], [Notes]) VALUES (2, N'Cơm chiên Dương châu', N'Đĩa nhỏ', 4, 35000, N'3 người ăn')
-INSERT [dbo].[Food] ([ID], [Name], [Unit], [FoodCategoryID], [Price], [Notes]) VALUES (3, N'Cơm chiên Dương châu', N'Đĩa lớn', 4, 40000, N'4 người ăn')
+INSERT [dbo].[Food] ([ID], [Name], [Unit], [FoodCategoryID], [Price], [Notes]) VALUES (2, N'Cơm chiên Dương châu (nhỏ)', N'Đĩa nhỏ', 4, 35000, N'3 người ăn')
+INSERT [dbo].[Food] ([ID], [Name], [Unit], [FoodCategoryID], [Price], [Notes]) VALUES (3, N'Cơm chiên Dương châu (lớn)', N'Đĩa lớn', 4, 40000, N'4 người ăn')
 INSERT [dbo].[Food] ([ID], [Name], [Unit], [FoodCategoryID], [Price], [Notes]) VALUES (4, N'Ếch thui rơm', N'Đĩa', 2, 70000, NULL)
 INSERT [dbo].[Food] ([ID], [Name], [Unit], [FoodCategoryID], [Price], [Notes]) VALUES (5, N'Sò lông nướng mỡ hành', N'Đĩa', 2, 80000, NULL)
 INSERT [dbo].[Food] ([ID], [Name], [Unit], [FoodCategoryID], [Price], [Notes]) VALUES (6, N'Càng cua hấp', N'Đĩa', 2, 100000, NULL)
@@ -326,6 +326,8 @@ Begin
 	INSERT INTO dbo.[Bills] (Name, TableID, Amount, Discount, Tax, [Status], CheckoutDate, Account) 
 	VALUES (@Name, @TableID, @Amount, @Discount, @Tax, @Status, @CheckoutDate, @Account)
 	SELECT @ID = SCOPE_IDENTITY()
+
+	UPDATE [Table] SET [Status] = 1 WHERE ID = @TableID
 End
 go
 
@@ -353,6 +355,25 @@ Begin
 	[CheckoutDate] = @CheckoutDate,
 	[Account] = @Account
 	Where ID = @ID
+End
+go
+
+CREATE PROCEDURE Bills_Update_Amount
+(
+	@ID INT,
+	@TableID INT,
+	@Amount INT
+)
+As
+Begin
+	Update dbo.[Bills]
+	SET [Amount] = @Amount,
+		[Status] = 1
+	Where ID = @ID
+
+	Update dbo.[Table]
+	SET [Status] = 0
+	WHERE ID = @TableID
 End
 go
 
@@ -508,6 +529,34 @@ Begin
 	Delete from dbo.[Table]
 	Where ID = @ID
 End
+go
+
+CREATE PROCEDURE BillDetails_Insert
+(
+	@ID INT OUTPUT,
+	@InvoiceID INT,
+	@FoodID INT,
+	@Quantity INT
+)
+As
+Begin
+		INSERT INTO dbo.[BillDetails] (InvoiceID, FoodID, Quantity) 
+		VALUES (@InvoiceID, @FoodID, @Quantity)
+	 	SELECT @ID = SCOPE_IDENTITY()
+End
+go
+
+CREATE PROCEDURE Delete_Bills
+(
+	@ID INT,
+	@TableID INT
+)
+As
+Begin
+	DELETE FROM Bills WHERE ID = @ID
+	UPDATE dbo.[Table] SET [Status] = 0 WHERE ID = @TableID
+End
+go
 
 EXEC Bills_Update 1, N'Hóa đơn thanh toán', 5, 150000, 0.05, 0, 1, '10/23/2021', N'tdquy'
 
@@ -565,6 +614,15 @@ EXEC Bills_Update 1, N'Hóa đơn thanh toán', 5, 150000, 0.05, 0, 1, '10/23/20
 --SELECT COUNT(ID) as SoLuong, SUM(Amount) as TongTien
 --FROM Bills
 --WHERE Account = N'tdquy'
+--select * from Bills
+--select * from BillDetails
+--select * from [Table]
+--SELECT ID FROM Food WHERE Name = N'Cơm chiên Dương châu (lớn)'
+
+--select ID From Bills Where TableID = 2 AND Status = 0
+
+--SELECT * FROM [Table]
+--SELECT RoleID FROM Account A, RoleAccount B WHERE A.AccountName = B.AccountName AND A.AccountName = N'lgcong' AND RoleID = 1
 
 select f.Name, f.Price, bd.Quantity, f.Price * bd.Quantity as Amount from Food f, BillDetails bd, Bills b
 where bd.FoodID = f.ID and bd.InvoiceID = b.ID and bd.InvoiceID = 1
